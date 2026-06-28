@@ -98,7 +98,20 @@ export async function readSession(): Promise<Session | null> {
   const json = await open(raw);
   if (!json) return null;
   try {
-    return JSON.parse(json) as Session;
+    const parsed = JSON.parse(json) as unknown;
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      typeof (parsed as { accessToken?: unknown }).accessToken !== "string" ||
+      typeof (parsed as { expiresAt?: unknown }).expiresAt !== "number"
+    ) {
+      return null;
+    }
+    const session = parsed as Session;
+    if (session.expiresAt < Date.now()) {
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }

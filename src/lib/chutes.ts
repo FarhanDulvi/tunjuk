@@ -88,9 +88,13 @@ export interface AskInput {
 
 export async function streamVisionAnswer(
   input: AskInput,
-): Promise<{ upstream: Response; modelId: string }> {
+): Promise<{ upstream: Response; modelId: string; isConfidential: boolean }> {
   const mime = input.imageMime ?? "image/png";
-  const modelId = input.model ?? (await pickVisionModel(input.accessToken)).id;
+  const picked = input.model
+    ? { id: input.model, isConfidential: false }
+    : await pickVisionModel(input.accessToken);
+  const modelId = picked.id;
+  const isConfidential = picked.isConfidential;
   const systemPrompt = [
     "You are Tunjuk, an AI screen tutor that watches a user's shared screen.",
     "The user has uploaded a screenshot of what they are looking at and asked a question.",
@@ -128,5 +132,5 @@ export async function streamVisionAnswer(
     body: JSON.stringify(body),
   });
 
-  return { upstream, modelId };
+  return { upstream, modelId, isConfidential };
 }

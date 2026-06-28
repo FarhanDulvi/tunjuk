@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   text: string;
@@ -12,9 +12,9 @@ function supportsSpeechSynthesis(): boolean {
 }
 
 export function TtsPlayer({ text, autoPlay = false }: Props) {
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => supportsSpeechSynthesis());
   const [playing, setPlaying] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const autoPlayedRef = useRef(false);
 
   const stop = useCallback(() => {
     if (!supported) return;
@@ -30,13 +30,11 @@ export function TtsPlayer({ text, autoPlay = false }: Props) {
     utterance.pitch = 1.0;
     utterance.onend = () => setPlaying(false);
     utterance.onerror = () => setPlaying(false);
-    utteranceRef.current = utterance;
     setPlaying(true);
     window.speechSynthesis.speak(utterance);
   }, [supported, text]);
 
   useEffect(() => {
-    setSupported(supportsSpeechSynthesis());
     return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -45,10 +43,11 @@ export function TtsPlayer({ text, autoPlay = false }: Props) {
   }, []);
 
   useEffect(() => {
-    if (autoPlay && text && supported && !playing) {
+    if (autoPlay && text && supported && !autoPlayedRef.current) {
+      autoPlayedRef.current = true;
       play();
     }
-  }, [autoPlay, text, supported, playing, play]);
+  }, [autoPlay, text, supported, play]);
 
   if (!supported) return null;
 

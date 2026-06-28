@@ -43,22 +43,43 @@ export async function POST(req: NextRequest) {
 
   const { data, mime } = stripDataUrlPrefix(body.imageBase64);
 
+  const ALLOWED_MIME = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+  ]);
+  const finalMime = body.imageMime ?? mime ?? "image/png";
+  if (!ALLOWED_MIME.has(finalMime)) {
+    return NextResponse.json({ error: "invalid_mime" }, { status: 400 });
+  }
+  if (question.length > 2000) {
+    return NextResponse.json({ error: "question_too_long" }, { status: 400 });
+  }
+  if (data.length > 20_000_000) {
+    return NextResponse.json({ error: "image_too_large" }, { status: 413 });
+  }
+
   let upstream: Response;
   let modelId: string;
+  let isConfidential = false;
   try {
     const result = await streamVisionAnswer({
       accessToken: session.accessToken,
       question,
       imageBase64: data,
-      imageMime: body.imageMime ?? mime ?? "image/png",
+      imageMime: finalMime,
     });
     upstream = result.upstream;
     modelId = result.modelId;
+    isConfidential = result.isConfidential;
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Chutes inference failed.";
+    console.error("[ask] Chutes error:", err);
     return NextResponse.json(
-      { error: "chutes_request_failed", message },
+      {
+        error: "chutes_request_failed",
+        message: "Upstream inference service error.",
+      },
       { status: 502 },
     );
   }
@@ -75,13 +96,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const safeModelId = modelId.replace(/[^\x20-\x7E]/g, "").slice(0, 128);
   return new Response(upstream.body, {
     status: 200,
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      "X-Tunjuk-Model": modelId,
-      "X-Tunjuk-Tee": modelId.toLowerCase().includes("tee") ? "1" : "0",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+      "X-Tunjuk-Model": safeModelId,
+      "X-Tunjuk-Tee": isConfidential ? "1" : "0",
     },
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import { AttestationBadge } from "@/components/attestation-badge";
 import { TtsPlayer } from "@/components/tts-player";
 
@@ -29,12 +30,14 @@ export function AnswerStream({
   const [tee, setTee] = useState(false);
   const [modelId, setModelId] = useState<string | undefined>(undefined);
   const [done, setDone] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    abortRef.current = controller;
     setText("");
     setError(null);
     setDone(false);
@@ -78,7 +81,12 @@ export function AnswerStream({
             if (payload === "[DONE]") {
               if (!cancelled) {
                 setDone(true);
-                onDone?.();
+                onDoneRef.current?.();
+              }
+              try {
+                await reader.cancel();
+              } catch {
+                // ignore
               }
               return;
             }
@@ -95,11 +103,12 @@ export function AnswerStream({
         }
         if (!cancelled) {
           setDone(true);
-          onDone?.();
+          onDoneRef.current?.();
         }
       } catch (err) {
-        if (cancelled || (err as Error).name === "AbortError") return;
-        setError((err as Error).message);
+        const e = err instanceof Error ? err : new Error(String(err));
+        if (cancelled || e.name === "AbortError") return;
+        setError(e.message);
         setDone(true);
       }
     }
@@ -109,7 +118,7 @@ export function AnswerStream({
       cancelled = true;
       controller.abort();
     };
-  }, [question, imageBase64, mimeType, onDone]);
+  }, [question, imageBase64, mimeType]);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
