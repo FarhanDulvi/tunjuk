@@ -2,8 +2,13 @@
 
 import type { ChangeEvent, DragEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { VoiceInput } from "@/components/voice-input";
 import { AnswerStream } from "@/components/answer-stream";
+import {
+  isDocumentPipSupported,
+  useDocumentPip,
+} from "@/components/pip-portal";
 
 interface Capture {
   base64: string;
@@ -43,6 +48,29 @@ export function ScreenShare() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const answerWrapperRef = useRef<HTMLDivElement | null>(null);
+  // Browser feature detection. Returns false during SSR (window undefined) and
+  // true on the client when Document PiP is available. Safe across hydration
+  // because the float button is gated on `stream || capture`, both of which
+  // are null on first paint on server and client.
+  const [pipSupported] = useState(() => isDocumentPipSupported());
+  const [inlineContainer, setInlineContainer] = useState<HTMLElement | null>(
+    null,
+  );
+  const pip = useDocumentPip({ width: 420, height: 720 });
+  const isFloating = pip.isOpen;
+  const canFloat = pipSupported && (stream !== null || capture !== null);
+  const askPanelTarget = pip.container ?? inlineContainer;
+  async function openFloating() {
+    try {
+      await pip.open();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not open the floating window.",
+      );
+    }
+  }
 
   const stopStream = useCallback(() => {
     if (stream) {
@@ -220,6 +248,124 @@ export function ScreenShare() {
     }
   }
 
+  const askPanel = (
+    <section className="space-y-4">
+      <header className="space-y-1">
+        <h2 className="text-lg font-semibold text-slate-900">2. Ask Tunjuk</h2>
+        <p className="text-sm text-slate-600">
+          Type a question, or speak it. Tunjuk sees the captured frame.
+        </p>
+      </header>
+
+      {capture ? (
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`data:${capture.mime};base64,${capture.base64}`}
+            alt="Captured screen frame"
+            className="max-h-48 w-full object-contain bg-slate-100"
+          />
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
+          Capture a frame from your shared screen above.
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label htmlFor="tunjuk-question" className="sr-only">
+          Your question
+        </label>
+        <textarea
+          id="tunjuk-question"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="e.g. How do I add auto-layout to this frame?"
+          aria-label="Your question for Tunjuk"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          rows={3}
+        />
+        <div className="flex items-center justify-between gap-2">
+          <VoiceInput onTranscript={setQuestion} />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!capture || !question.trim()}
+            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Ask Tunjuk
+          </button>
+        </div>
+      </div>
+
+      {submittedQuestion && submittedCapture ? (
+        <div className="space-y-2">
+          <div ref={answerWrapperRef}>
+            <AnswerStream
+              question={submittedQuestion}
+              imageBase64={submittedCapture.base64}
+              mimeType={submittedCapture.mime}
+              onDone={handleAnswerDone}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={reset}
+            className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+          >
+            Ask another question
+          </button>
+        </div>
+      ) : null}
+
+      <div className="space-y-3 border-t border-slate-200 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs text-slate-500">
+            Session transcript: {transcript.length}{" "}
+            {transcript.length === 1 ? "exchange" : "exchanges"}
+          </div>
+          <button
+            type="button"
+            onClick={endSession}
+            disabled={summarising || transcript.length === 0}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {summarising ? "Summarising…" : "End session — get summary"}
+          </button>
+        </div>
+
+        {summaryError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {summaryError}
+          </p>
+        ) : null}
+
+        {summary ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                Session summary
+              </h4>
+              {summaryModelId ? (
+                <span
+                  className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-mono text-emerald-700"
+                  title={summaryModelId}
+                >
+                  {summaryModelId.length > 32
+                    ? summaryModelId.slice(0, 30) + "…"
+                    : summaryModelId}
+                </span>
+              ) : null}
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+              {summary}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-4">
@@ -268,6 +414,16 @@ export function ScreenShare() {
           >
             Upload a screenshot
           </button>
+          {canFloat && !isFloating ? (
+            <button
+              type="button"
+              onClick={openFloating}
+              className="rounded-lg border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50"
+              title="Open the Ask Tunjuk panel in a floating Picture-in-Picture window so you can switch apps while reading the answer."
+            >
+              📌 Float panel
+            </button>
+          ) : null}
           <input
             ref={fileInputRef}
             type="file"
@@ -319,118 +475,36 @@ export function ScreenShare() {
         <canvas ref={canvasRef} className="hidden" />
       </section>
 
-      <section className="space-y-4">
-        <header className="space-y-1">
-          <h2 className="text-lg font-semibold text-slate-900">
-            2. Ask Tunjuk
-          </h2>
-          <p className="text-sm text-slate-600">
-            Type a question, or speak it. Tunjuk sees the captured frame.
-          </p>
-        </header>
+      {/*
+        The inline container always stays mounted so the React element below
+        keeps the same parent across float toggles. Only the portal *target*
+        changes, which preserves child component state (e.g. AnswerStream's
+        in-flight fetch and AttestationBadge / TtsPlayer internal refs).
+      */}
+      <div
+        ref={setInlineContainer}
+        className={isFloating ? "hidden" : "space-y-4"}
+        aria-hidden={isFloating}
+      />
 
-        {capture ? (
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`data:${capture.mime};base64,${capture.base64}`}
-              alt="Captured screen frame"
-              className="max-h-48 w-full object-contain bg-slate-100"
-            />
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
-            Capture a frame from your shared screen above.
-          </div>
-        )}
+      {isFloating ? (
+        <button
+          type="button"
+          onClick={pip.close}
+          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/60 p-6 text-center text-sm text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-50"
+        >
+          <span className="text-2xl">📌</span>
+          <span className="font-semibold">
+            Panel is floating in a separate window
+          </span>
+          <span className="text-xs text-emerald-600/80">
+            Click here to close the floating window and return the panel in
+            place.
+          </span>
+        </button>
+      ) : null}
 
-        <div className="space-y-2">
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="e.g. How do I add auto-layout to this frame?"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-            rows={3}
-          />
-          <div className="flex items-center justify-between gap-2">
-            <VoiceInput onTranscript={setQuestion} />
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!capture || !question.trim()}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Ask Tunjuk
-            </button>
-          </div>
-        </div>
-
-        {submittedQuestion && submittedCapture ? (
-          <div className="space-y-2">
-            <div ref={answerWrapperRef}>
-              <AnswerStream
-                question={submittedQuestion}
-                imageBase64={submittedCapture.base64}
-                mimeType={submittedCapture.mime}
-                onDone={handleAnswerDone}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={reset}
-              className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
-            >
-              Ask another question
-            </button>
-          </div>
-        ) : null}
-
-        <div className="space-y-3 border-t border-slate-200 pt-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-xs text-slate-500">
-              Session transcript: {transcript.length}{" "}
-              {transcript.length === 1 ? "exchange" : "exchanges"}
-            </div>
-            <button
-              type="button"
-              onClick={endSession}
-              disabled={summarising || transcript.length === 0}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {summarising ? "Summarising…" : "End session — get summary"}
-            </button>
-          </div>
-
-          {summaryError ? (
-            <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {summaryError}
-            </p>
-          ) : null}
-
-          {summary ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                  Session summary
-                </h4>
-                {summaryModelId ? (
-                  <span
-                    className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-mono text-emerald-700"
-                    title={summaryModelId}
-                  >
-                    {summaryModelId.length > 32
-                      ? summaryModelId.slice(0, 30) + "…"
-                      : summaryModelId}
-                  </span>
-                ) : null}
-              </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                {summary}
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </section>
+      {askPanelTarget ? createPortal(askPanel, askPanelTarget) : null}
     </div>
   );
 }

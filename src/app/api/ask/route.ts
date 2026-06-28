@@ -75,10 +75,34 @@ export async function POST(req: NextRequest) {
     isConfidential = result.isConfidential;
   } catch (err) {
     console.error("[ask] Chutes error:", err);
+    const e = err as { message?: unknown; name?: unknown; cause?: unknown };
+    const rawMessage =
+      typeof e?.message === "string" && e.message.length > 0
+        ? e.message
+        : "Upstream inference service error.";
+    const name = typeof e?.name === "string" ? e.name : undefined;
+    let causeHint: string | undefined;
+    if (e?.cause !== undefined && e?.cause !== null) {
+      const c = e.cause as { message?: unknown; code?: unknown };
+      if (typeof c?.message === "string" && c.message.length > 0) {
+        causeHint = c.message;
+      } else if (typeof c?.code === "string" && c.code.length > 0) {
+        causeHint = c.code;
+      } else if (typeof e.cause === "string") {
+        causeHint = e.cause;
+      }
+    }
+    const hintParts = [name, causeHint].filter(
+      (v): v is string => typeof v === "string" && v.length > 0,
+    );
+    const message =
+      hintParts.length > 0
+        ? `${rawMessage} (${hintParts.join(": ")})`
+        : rawMessage;
     return NextResponse.json(
       {
         error: "chutes_request_failed",
-        message: "Upstream inference service error.",
+        message,
       },
       { status: 502 },
     );
@@ -86,10 +110,48 @@ export async function POST(req: NextRequest) {
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => "");
+    let message = "";
+    const trimmed = text.trim();
+    if (trimmed.length > 0) {
+      try {
+        const parsed: unknown = JSON.parse(trimmed);
+        if (parsed && typeof parsed === "object") {
+          const p = parsed as {
+            error?: unknown;
+            error_description?: unknown;
+            message?: unknown;
+            detail?: unknown;
+          };
+          const pickString = (v: unknown): string | undefined => {
+            if (typeof v === "string" && v.length > 0) return v;
+            if (v && typeof v === "object") {
+              const inner = (v as { message?: unknown }).message;
+              if (typeof inner === "string" && inner.length > 0) return inner;
+            }
+            return undefined;
+          };
+          message =
+            pickString(p.error_description) ??
+            pickString(p.message) ??
+            pickString(p.detail) ??
+            pickString(p.error) ??
+            "";
+        }
+      } catch {
+        // not JSON; fall through to raw text fallback
+      }
+      if (!message) {
+        message = trimmed.slice(0, 240);
+      }
+    }
+    if (!message) {
+      message = `Upstream returned HTTP ${upstream.status}.`;
+    }
     return NextResponse.json(
       {
         error: "chutes_upstream_error",
         status: upstream.status,
+        message,
         body: text.slice(0, 1000),
       },
       { status: 502 },
