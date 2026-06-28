@@ -1,5 +1,6 @@
 "use client";
 
+import type { ChangeEvent, DragEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VoiceInput } from "@/components/voice-input";
 import { AnswerStream } from "@/components/answer-stream";
@@ -14,10 +15,19 @@ interface TranscriptEntry {
   a: string;
 }
 
+const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
 export function ScreenShare() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [capture, setCapture] = useState<Capture | null>(null);
+  const [canScreenShare] = useState(
+    () =>
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getDisplayMedia === "function",
+  );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [question, setQuestion] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState<string | null>(
     null,
@@ -61,6 +71,12 @@ export function ScreenShare() {
 
   async function startShare() {
     setError(null);
+    if (!canScreenShare) {
+      setError(
+        'Screen sharing is not supported in this browser. Use "Upload screenshot" below — your phone camera or photo library works.',
+      );
+      return;
+    }
     try {
       const next = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 15 },
@@ -76,6 +92,52 @@ export function ScreenShare() {
           "Could not start screen share. Please grant permission.",
       );
     }
+  }
+
+  function handleFile(file: File) {
+    setError(null);
+    const mime = file.type;
+    if (!ALLOWED_MIME.includes(mime)) {
+      setError(
+        `Unsupported image type "${mime || "unknown"}". Use PNG, JPEG, WebP, or GIF.`,
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        setError("Could not read the selected file.");
+        return;
+      }
+      const base64 = result.split(",")[1] ?? "";
+      if (!base64) {
+        setError("Could not read the selected file.");
+        return;
+      }
+      setCapture({ base64, mime });
+    };
+    reader.onerror = () => {
+      setError("Could not read the selected file.");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function onFileInputChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    // Reset value so picking the same file again still triggers onChange.
+    e.target.value = "";
+  }
+
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  function onDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
   }
 
   function captureFrame() {
@@ -166,37 +228,55 @@ export function ScreenShare() {
             1. Share your screen
           </h2>
           <p className="text-sm text-slate-600">
-            Pick a window or tab. Tunjuk processes one frame at a time —
-            nothing is recorded.
+            Pick a window or tab, or upload a screenshot. Tunjuk processes one
+            frame at a time — nothing is recorded.
           </p>
         </header>
 
-        {!stream ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {!stream ? (
+            <button
+              type="button"
+              onClick={startShare}
+              className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Start screen share
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={captureFrame}
+                className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+              >
+                📸 Capture frame
+              </button>
+              <button
+                type="button"
+                onClick={stopStream}
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              >
+                Stop sharing
+              </button>
+            </>
+          )}
+
           <button
             type="button"
-            onClick={startShare}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-600"
           >
-            Start screen share
+            Upload a screenshot
           </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={captureFrame}
-              className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
-            >
-              📸 Capture frame
-            </button>
-            <button
-              type="button"
-              onClick={stopStream}
-              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-            >
-              Stop sharing
-            </button>
-          </div>
-        )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onFileInputChange}
+            className="hidden"
+          />
+        </div>
 
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -204,7 +284,11 @@ export function ScreenShare() {
           </p>
         ) : null}
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+        <div
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+        >
           {stream ? (
             <video
               ref={videoRef}
@@ -213,9 +297,21 @@ export function ScreenShare() {
               playsInline
               className="aspect-video w-full bg-black"
             />
+          ) : capture ? (
+            <div className="flex aspect-video w-full items-center justify-center bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`data:${capture.mime};base64,${capture.base64}`}
+                alt="Uploaded screenshot preview"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
           ) : (
-            <div className="flex aspect-video w-full items-center justify-center text-sm text-slate-400">
-              No screen shared yet
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-1 text-center text-sm text-slate-400">
+              <span>Drop a screenshot here, or use the buttons above.</span>
+              <span className="text-xs text-slate-400">
+                You can also drag-and-drop a screenshot into this box.
+              </span>
             </div>
           )}
         </div>
