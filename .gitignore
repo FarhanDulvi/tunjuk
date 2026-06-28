@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+.gstack/
+
+# media artifacts produced during this hack — never commit
+audio/
+transcripts/

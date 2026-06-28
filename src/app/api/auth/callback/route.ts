@@ -22,10 +22,13 @@ interface UserInfoResponse {
   preferred_username?: string;
 }
 
-function errorRedirect(reason: string): NextResponse {
+function errorRedirect(reason: string, detail?: string): NextResponse {
   const u = new URL(env.NEXT_PUBLIC_APP_URL);
   u.pathname = "/";
   u.searchParams.set("error", reason);
+  if (detail) {
+    u.searchParams.set("error_detail", detail.slice(0, 240));
+  }
   return NextResponse.redirect(u.toString());
 }
 
@@ -61,7 +64,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (!r.ok || !token.access_token) {
-    return errorRedirect(token.error ?? "token_exchange_failed");
+    return errorRedirect(
+      token.error ?? "token_exchange_failed",
+      token.error_description,
+    );
   }
 
   const session: Session = {
