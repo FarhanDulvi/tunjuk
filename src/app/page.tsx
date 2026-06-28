@@ -27,6 +27,10 @@ export default async function Home({ searchParams }: PageProps) {
         <h1 className="text-5xl font-bold tracking-tight text-slate-900">
           Tunjuk
         </h1>
+        <p className="text-sm italic text-slate-500">
+          <span className="not-italic font-semibold">Tunjuk</span> —
+          &ldquo;tunjukkan saya&rdquo; in Bahasa Malaysia (show me).
+        </p>
         <p className="text-xl text-slate-700">
           Share your screen. Ask anything. AI sees what you see.
         </p>
@@ -52,6 +56,14 @@ export default async function Home({ searchParams }: PageProps) {
           open-source from day one.
         </p>
       </header>
+
+      <blockquote className="mb-8 border-l-4 border-emerald-400 pl-4 italic text-slate-700">
+        &ldquo;Chutes is an open source inference provider — bring any brain to
+        that body.&rdquo;
+        <footer className="mt-1 text-xs not-italic text-slate-500">
+          — Vince, Chutes
+        </footer>
+      </blockquote>
 
       {error && ERROR_COPY[error] ? (
         <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -82,28 +94,29 @@ export default async function Home({ searchParams }: PageProps) {
       <section className="grid gap-6 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            1. Share
+            Sign in with Chutes
           </h2>
           <p className="text-sm text-slate-700">
-            Pick a window or browser tab. One frame at a time, never recorded.
+            Your bill, not ours. OAuth into Chutes; this app never holds
+            inference credit.
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            2. Ask
+            Confidential Compute (TEE)
           </h2>
           <p className="text-sm text-slate-700">
-            Type or speak your question. Tunjuk sees the screenshot you
-            captured.
+            When a TEE-attested model is available, Tunjuk picks it
+            automatically and shows a verifiable badge in the answer header.
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            3. Hear it back
+            Open-source MIT
           </h2>
           <p className="text-sm text-slate-700">
-            Get a concrete answer, spoken aloud. Inference runs on confidential
-            compute when available.
+            Self-host the whole thing. No vendor lock-in, no hidden middleware
+            — see the GitHub repo.
           </p>
         </div>
       </section>

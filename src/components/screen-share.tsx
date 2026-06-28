@@ -9,6 +9,11 @@ interface Capture {
   mime: string;
 }
 
+interface TranscriptEntry {
+  q: string;
+  a: string;
+}
+
 export function ScreenShare() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +25,14 @@ export function ScreenShare() {
   const [submittedCapture, setSubmittedCapture] = useState<Capture | null>(
     null,
   );
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryModelId, setSummaryModelId] = useState<string | null>(null);
+  const [summarising, setSummarising] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const answerWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const stopStream = useCallback(() => {
     if (stream) {
@@ -96,6 +107,55 @@ export function ScreenShare() {
   function reset() {
     setSubmittedCapture(null);
     setSubmittedQuestion(null);
+  }
+
+  function handleAnswerDone() {
+    // Read the final answer text from the rendered AnswerStream DOM.
+    // AnswerStream renders the answer inside a <p> element (the only <p>
+    // descendant in its <section>). This avoids widening AnswerStream's
+    // callback signature, which is owned by another batch.
+    const root = answerWrapperRef.current;
+    const q = submittedQuestion;
+    if (!root || !q) return;
+    const para = root.querySelector("p");
+    const a = (para?.textContent ?? "").trim();
+    if (!a || a === "Thinking…" || a === "(empty response)") return;
+    setTranscript((prev) => [...prev, { q, a }]);
+  }
+
+  async function endSession() {
+    if (transcript.length === 0 || summarising) return;
+    setSummarising(true);
+    setSummary(null);
+    setSummaryError(null);
+    setSummaryModelId(null);
+    try {
+      const text = transcript
+        .map((t) => `Q: ${t.q}\nA: ${t.a}`)
+        .join("\n\n");
+      const r = await fetch("/api/summarise", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: text }),
+      });
+      const body = (await r.json().catch(() => ({}))) as {
+        summary?: string;
+        modelId?: string;
+        message?: string;
+        error?: string;
+      };
+      if (!r.ok) {
+        throw new Error(body.message ?? body.error ?? `Failed: ${r.status}`);
+      }
+      setSummary(body.summary ?? "");
+      setSummaryModelId(body.modelId ?? null);
+    } catch (err) {
+      setSummaryError(
+        err instanceof Error ? err.message : "Could not generate summary.",
+      );
+    } finally {
+      setSummarising(false);
+    }
   }
 
   return (
@@ -211,11 +271,14 @@ export function ScreenShare() {
 
         {submittedQuestion && submittedCapture ? (
           <div className="space-y-2">
-            <AnswerStream
-              question={submittedQuestion}
-              imageBase64={submittedCapture.base64}
-              mimeType={submittedCapture.mime}
-            />
+            <div ref={answerWrapperRef}>
+              <AnswerStream
+                question={submittedQuestion}
+                imageBase64={submittedCapture.base64}
+                mimeType={submittedCapture.mime}
+                onDone={handleAnswerDone}
+              />
+            </div>
             <button
               type="button"
               onClick={reset}
@@ -225,6 +288,52 @@ export function ScreenShare() {
             </button>
           </div>
         ) : null}
+
+        <div className="space-y-3 border-t border-slate-200 pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-slate-500">
+              Session transcript: {transcript.length}{" "}
+              {transcript.length === 1 ? "exchange" : "exchanges"}
+            </div>
+            <button
+              type="button"
+              onClick={endSession}
+              disabled={summarising || transcript.length === 0}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {summarising ? "Summarising…" : "End session — get summary"}
+            </button>
+          </div>
+
+          {summaryError ? (
+            <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {summaryError}
+            </p>
+          ) : null}
+
+          {summary ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                  Session summary
+                </h4>
+                {summaryModelId ? (
+                  <span
+                    className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-mono text-emerald-700"
+                    title={summaryModelId}
+                  >
+                    {summaryModelId.length > 32
+                      ? summaryModelId.slice(0, 30) + "…"
+                      : summaryModelId}
+                  </span>
+                ) : null}
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                {summary}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </section>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AttestationBadge } from "@/components/attestation-badge";
+import { PersistenceBadge } from "@/components/persistence-badge";
 import { TtsPlayer } from "@/components/tts-player";
 
 interface Props {
@@ -30,6 +31,8 @@ export function AnswerStream({
   const [tee, setTee] = useState(false);
   const [modelId, setModelId] = useState<string | undefined>(undefined);
   const [done, setDone] = useState(false);
+  const [ttfbMs, setTtfbMs] = useState<number | null>(null);
+  const [totalMs, setTotalMs] = useState<number | null>(null);
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -41,8 +44,11 @@ export function AnswerStream({
     setText("");
     setError(null);
     setDone(false);
+    setTtfbMs(null);
+    setTotalMs(null);
 
     async function run() {
+      const startedAt = performance.now();
       try {
         const res = await fetch("/api/ask", {
           method: "POST",
@@ -80,6 +86,7 @@ export function AnswerStream({
             const payload = line.slice(5).trim();
             if (payload === "[DONE]") {
               if (!cancelled) {
+                setTotalMs(performance.now() - startedAt);
                 setDone(true);
                 onDoneRef.current?.();
               }
@@ -94,6 +101,11 @@ export function AnswerStream({
               const chunk = JSON.parse(payload) as DeltaChunk;
               const delta = chunk.choices?.[0]?.delta?.content;
               if (delta) {
+                if (!cancelled) {
+                  setTtfbMs((prev) =>
+                    prev == null ? performance.now() - startedAt : prev,
+                  );
+                }
                 setText((prev) => prev + delta);
               }
             } catch {
@@ -102,6 +114,7 @@ export function AnswerStream({
           }
         }
         if (!cancelled) {
+          setTotalMs(performance.now() - startedAt);
           setDone(true);
           onDoneRef.current?.();
         }
@@ -127,7 +140,25 @@ export function AnswerStream({
           Tunjuk says
         </h3>
         <div className="flex items-center gap-2">
+          <PersistenceBadge />
           <AttestationBadge tee={tee} modelId={modelId} />
+          {modelId ? (
+            <span
+              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-mono text-slate-600"
+              title={modelId}
+            >
+              Picked: {modelId.length > 28 ? modelId.slice(0, 26) + "…" : modelId}
+            </span>
+          ) : null}
+          {done && ttfbMs != null && totalMs != null ? (
+            <span
+              className="text-[11px] font-mono text-slate-500"
+              title="First token / total stream"
+            >
+              ⚡ {(ttfbMs / 1000).toFixed(1)}s first token ·{" "}
+              {(totalMs / 1000).toFixed(1)}s total
+            </span>
+          ) : null}
           {done && text ? <TtsPlayer text={text} autoPlay /> : null}
         </div>
       </header>
