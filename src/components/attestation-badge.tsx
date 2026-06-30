@@ -20,7 +20,7 @@ export function AttestationBadge({ tee, modelId }: Props) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setOpen(false)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 transition hover:bg-emerald-100"
+        className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 text-xs font-medium text-cyan-200 transition hover:bg-cyan-400/15"
         aria-expanded={open}
         aria-label="Confidential compute information"
       >
@@ -30,9 +30,9 @@ export function AttestationBadge({ tee, modelId }: Props) {
       {open ? (
         <div
           role="dialog"
-          className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-emerald-200 bg-white p-3 text-xs text-slate-700 shadow-lg"
+          className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-white/10 bg-[#0c1020] p-3 text-xs text-zinc-300 shadow-xl"
         >
-          <p className="mb-1 font-semibold text-slate-900">
+          <p className="mb-1 font-semibold text-white">
             Hardware-isolated inference
           </p>
           <p>
@@ -41,11 +41,11 @@ export function AttestationBadge({ tee, modelId }: Props) {
             screenshot you shared.
           </p>
           {modelId ? (
-            <p className="mt-2 break-all text-[10px] text-slate-500">
+            <p className="mt-2 break-all font-mono text-[10px] text-zinc-500">
               Model: {modelId}
             </p>
           ) : null}
-          <p className="mt-2 text-[10px] text-slate-500">
+          <p className="mt-2 text-[10px] text-zinc-500">
             Attestation proves the execution environment, not the AI&apos;s
             fairness or correctness.
           </p>

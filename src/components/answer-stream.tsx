@@ -134,17 +134,17 @@ export function AnswerStream({
   }, [question, imageBase64, mimeType]);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <header className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
           Tunjuk says
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PersistenceBadge />
           <AttestationBadge tee={tee} modelId={modelId} />
           {modelId ? (
             <span
-              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-mono text-slate-600"
+              className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-mono text-zinc-400"
               title={modelId}
             >
               Picked: {modelId.length > 28 ? modelId.slice(0, 26) + "…" : modelId}
@@ -152,20 +152,21 @@ export function AnswerStream({
           ) : null}
           {done && ttfbMs != null && totalMs != null ? (
             <span
-              className="text-[11px] font-mono text-slate-500"
+              className="text-[11px] font-mono text-zinc-500"
               title="First token / total stream"
             >
-              ⚡ {(ttfbMs / 1000).toFixed(1)}s first token ·{" "}
-              {(totalMs / 1000).toFixed(1)}s total
+              ⚡ {(ttfbMs / 1000).toFixed(1)}s · {(totalMs / 1000).toFixed(1)}s total
             </span>
           ) : null}
           {done && text ? <TtsPlayer text={text} autoPlay /> : null}
         </div>
       </header>
       {error ? (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
+          {error}
+        </p>
       ) : (
-        <p className="whitespace-pre-wrap text-base leading-relaxed text-slate-800">
+        <p className="whitespace-pre-wrap text-base leading-relaxed text-zinc-100">
           {text || (done ? "(empty response)" : "Thinking…")}
         </p>
       )}

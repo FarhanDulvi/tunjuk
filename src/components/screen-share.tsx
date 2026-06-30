@@ -48,10 +48,6 @@ export function ScreenShare() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const answerWrapperRef = useRef<HTMLDivElement | null>(null);
-  // Browser feature detection. Returns false during SSR (window undefined) and
-  // true on the client when Document PiP is available. Safe across hydration
-  // because the float button is gated on `stream || capture`, both of which
-  // are null on first paint on server and client.
   const [pipSupported] = useState(() => isDocumentPipSupported());
   const [inlineContainer, setInlineContainer] = useState<HTMLElement | null>(
     null,
@@ -154,7 +150,6 @@ export function ScreenShare() {
   function onFileInputChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // Reset value so picking the same file again still triggers onChange.
     e.target.value = "";
   }
 
@@ -200,10 +195,6 @@ export function ScreenShare() {
   }
 
   function handleAnswerDone() {
-    // Read the final answer text from the rendered AnswerStream DOM.
-    // AnswerStream renders the answer inside a <p> element (the only <p>
-    // descendant in its <section>). This avoids widening AnswerStream's
-    // callback signature, which is owned by another batch.
     const root = answerWrapperRef.current;
     const q = submittedQuestion;
     if (!root || !q) return;
@@ -251,23 +242,25 @@ export function ScreenShare() {
   const askPanel = (
     <section className="space-y-4">
       <header className="space-y-1">
-        <h2 className="text-lg font-semibold text-slate-900">2. Ask Tunjuk</h2>
-        <p className="text-sm text-slate-600">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+          02 — Ask Tunjuk
+        </h2>
+        <p className="text-sm text-zinc-400">
           Type a question, or speak it. Tunjuk sees the captured frame.
         </p>
       </header>
 
       {capture ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`data:${capture.mime};base64,${capture.base64}`}
             alt="Captured screen frame"
-            className="max-h-48 w-full object-contain bg-slate-100"
+            className="max-h-48 w-full object-contain bg-black"
           />
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
           Capture a frame from your shared screen above.
         </div>
       )}
@@ -282,7 +275,7 @@ export function ScreenShare() {
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="e.g. How do I add auto-layout to this frame?"
           aria-label="Your question for Tunjuk"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
           rows={3}
         />
         <div className="flex items-center justify-between gap-2">
@@ -291,9 +284,9 @@ export function ScreenShare() {
             type="button"
             onClick={submit}
             disabled={!capture || !question.trim()}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(34,211,238,0.6)] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none"
           >
-            Ask Tunjuk
+            Ask Tunjuk →
           </button>
         </div>
       </div>
@@ -311,16 +304,16 @@ export function ScreenShare() {
           <button
             type="button"
             onClick={reset}
-            className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+            className="text-xs font-medium text-zinc-500 underline underline-offset-2 hover:text-zinc-300"
           >
             Ask another question
           </button>
         </div>
       ) : null}
 
-      <div className="space-y-3 border-t border-slate-200 pt-4">
+      <div className="space-y-3 border-t border-white/10 pt-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-zinc-500">
             Session transcript: {transcript.length}{" "}
             {transcript.length === 1 ? "exchange" : "exchanges"}
           </div>
@@ -328,27 +321,27 @@ export function ScreenShare() {
             type="button"
             onClick={endSession}
             disabled={summarising || transcript.length === 0}
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {summarising ? "Summarising…" : "End session — get summary"}
           </button>
         </div>
 
         {summaryError ? (
-          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
             {summaryError}
           </p>
         ) : null}
 
         {summary ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+          <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              <h4 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 Session summary
               </h4>
               {summaryModelId ? (
                 <span
-                  className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-mono text-emerald-700"
+                  className="rounded-full border border-cyan-400/20 bg-[#08090f] px-2 py-0.5 text-[10px] font-mono text-cyan-200"
                   title={summaryModelId}
                 >
                   {summaryModelId.length > 32
@@ -357,7 +350,7 @@ export function ScreenShare() {
                 </span>
               ) : null}
             </div>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
               {summary}
             </p>
           </div>
@@ -370,10 +363,10 @@ export function ScreenShare() {
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-4">
         <header className="space-y-1">
-          <h2 className="text-lg font-semibold text-slate-900">
-            1. Share your screen
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+            01 — Share your screen
           </h2>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-zinc-400">
             Pick a window or tab, or upload a screenshot. Tunjuk processes one
             frame at a time — nothing is recorded.
           </p>
@@ -384,7 +377,7 @@ export function ScreenShare() {
             <button
               type="button"
               onClick={startShare}
-              className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/20 hover:bg-white/[0.08]"
             >
               Start screen share
             </button>
@@ -393,14 +386,14 @@ export function ScreenShare() {
               <button
                 type="button"
                 onClick={captureFrame}
-                className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                className="rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(34,211,238,0.6)] transition hover:bg-cyan-400"
               >
                 📸 Capture frame
               </button>
               <button
                 type="button"
                 onClick={stopStream}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.06]"
               >
                 Stop sharing
               </button>
@@ -410,7 +403,7 @@ export function ScreenShare() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-600"
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-cyan-400/40 hover:text-cyan-300"
           >
             Upload a screenshot
           </button>
@@ -418,7 +411,7 @@ export function ScreenShare() {
             <button
               type="button"
               onClick={openFloating}
-              className="rounded-lg border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50"
+              className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-400/15"
               title="Open the Ask Tunjuk panel in a floating Picture-in-Picture window so you can switch apps while reading the answer."
             >
               📌 Float panel
@@ -435,7 +428,7 @@ export function ScreenShare() {
         </div>
 
         {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
             {error}
           </p>
         ) : null}
@@ -443,7 +436,7 @@ export function ScreenShare() {
         <div
           onDrop={onDrop}
           onDragOver={onDragOver}
-          className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+          className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]"
         >
           {stream ? (
             <video
@@ -454,7 +447,7 @@ export function ScreenShare() {
               className="aspect-video w-full bg-black"
             />
           ) : capture ? (
-            <div className="flex aspect-video w-full items-center justify-center bg-slate-100">
+            <div className="flex aspect-video w-full items-center justify-center bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`data:${capture.mime};base64,${capture.base64}`}
@@ -463,9 +456,9 @@ export function ScreenShare() {
               />
             </div>
           ) : (
-            <div className="flex aspect-video w-full flex-col items-center justify-center gap-1 text-center text-sm text-slate-400">
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-1 text-center text-sm text-zinc-500">
               <span>Drop a screenshot here, or use the buttons above.</span>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-zinc-600">
                 You can also drag-and-drop a screenshot into this box.
               </span>
             </div>
@@ -475,12 +468,6 @@ export function ScreenShare() {
         <canvas ref={canvasRef} className="hidden" />
       </section>
 
-      {/*
-        The inline container always stays mounted so the React element below
-        keeps the same parent across float toggles. Only the portal *target*
-        changes, which preserves child component state (e.g. AnswerStream's
-        in-flight fetch and AttestationBadge / TtsPlayer internal refs).
-      */}
       <div
         ref={setInlineContainer}
         className={isFloating ? "hidden" : "space-y-4"}
@@ -491,13 +478,13 @@ export function ScreenShare() {
         <button
           type="button"
           onClick={pip.close}
-          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/60 p-6 text-center text-sm text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-50"
+          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cyan-400/30 bg-cyan-400/5 p-6 text-center text-sm text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-400/10"
         >
           <span className="text-2xl">📌</span>
           <span className="font-semibold">
             Panel is floating in a separate window
           </span>
-          <span className="text-xs text-emerald-600/80">
+          <span className="text-xs text-cyan-300/80">
             Click here to close the floating window and return the panel in
             place.
           </span>

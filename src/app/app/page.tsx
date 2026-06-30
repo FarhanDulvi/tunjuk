@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/session";
 import { ScreenShare } from "@/components/screen-share";
@@ -17,17 +18,24 @@ export default async function AppPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tunjuk</h1>
-          <p className="text-sm text-slate-600">
-            Signed in as <span className="font-medium">{displayName}</span>
-          </p>
-        </div>
+      <header className="mb-10 flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-200 transition hover:text-white"
+        >
+          <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-cyan-400 to-indigo-500 text-base font-bold text-[#08090f]">
+            T
+          </span>
+          <span>Tunjuk</span>
+          <span className="ml-3 text-xs font-normal text-zinc-500">
+            signed in as{" "}
+            <span className="font-medium text-zinc-300">{displayName}</span>
+          </span>
+        </Link>
         <form action="/api/auth/logout" method="POST">
           <button
             type="submit"
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.08]"
           >
             Sign out
           </button>

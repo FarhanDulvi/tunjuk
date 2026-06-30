@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tunjuk — show your AI what you see",
+  title: "Tunjuk — AI that watches your screen",
   description:
-    "Open-source AI screen tutor. Sign in with Chutes; you pay your own AI bill.",
+    "AI screen tutor running on Chutes confidential compute. Sign in with your Chutes account, share a window, ask anything.",
 };
 
 export default function RootLayout({
@@ -28,7 +28,8 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <body className="min-h-full flex flex-col bg-[#08090f] text-zinc-100 selection:bg-cyan-400/30">
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_30%_-10%,rgba(34,211,238,0.12),transparent_55%),radial-gradient(circle_at_85%_10%,rgba(99,102,241,0.10),transparent_50%)]" />
         {children}
       </body>
     </html>
