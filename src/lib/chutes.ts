@@ -22,12 +22,30 @@ const VISION_HINTS = [
   "vision",
   "qwen3-vl",
   "qwen2-vl",
+  "qwen2.5-vl",
   "qwen-vl",
   "llama-3.2-vision",
+  "llama-3.2-11b-vision",
+  "llama-3.2-90b-vision",
   "molmo",
   "internvl",
   "pixtral",
   "glm-4v",
+  "llava",
+  "minicpm-v",
+  "cogvlm",
+  "phi-3.5-vision",
+  "phi-3-vision",
+  "idefics",
+];
+
+// Known-good vision model ids on Chutes. Used as a last-resort fallback when
+// /v1/models returns no entries our heuristic recognises. Upstream surfaces
+// a clearer error than ours if the user's plan doesn't include the model.
+const VISION_FALLBACKS = [
+  "Qwen/Qwen2.5-VL-32B-Instruct",
+  "Qwen/Qwen2.5-VL-7B-Instruct",
+  "meta-llama/Llama-3.2-11B-Vision-Instruct",
 ];
 
 function isProbablyVisionModel(m: ChutesModel): boolean {
@@ -62,7 +80,13 @@ export async function pickVisionModel(
       isConfidential: env.CHUTES_VISION_MODEL.toLowerCase().includes("tee"),
     };
   }
-  const models = await listModels(accessToken);
+  let models: ChutesModel[] = [];
+  try {
+    models = await listModels(accessToken);
+  } catch {
+    // Catalog fetch failed entirely — drop straight to the fallback ladder so
+    // the user still gets an attempt rather than a hard wall.
+  }
   const visionModels = models.filter(isProbablyVisionModel);
   const teeFirst = visionModels.sort((a, b) => {
     const aT = a.confidential_compute ? 1 : 0;
@@ -70,12 +94,20 @@ export async function pickVisionModel(
     return bT - aT;
   });
   const choice = teeFirst[0];
-  if (!choice) {
-    throw new Error(
-      "No vision-capable Chutes model is currently available to your account.",
-    );
+  if (choice) {
+    return { id: choice.id, isConfidential: !!choice.confidential_compute };
   }
-  return { id: choice.id, isConfidential: !!choice.confidential_compute };
+
+  // Catalog didn't surface a vision model our heuristic recognises. Try the
+  // known-good list — if any id is present in the catalog use it; otherwise
+  // attempt the first fallback and let upstream error speak.
+  const idSet = new Set(models.map((m) => m.id));
+  for (const f of VISION_FALLBACKS) {
+    if (idSet.has(f)) {
+      return { id: f, isConfidential: false };
+    }
+  }
+  return { id: VISION_FALLBACKS[0], isConfidential: false };
 }
 
 export interface AskInput {

@@ -93,6 +93,21 @@ export function ScreenShare() {
     }
   }, [stream]);
 
+  // Best-effort auto-float when the tab goes hidden. Most browsers preserve
+  // the user-activation token for ~5s after the last gesture, so this works
+  // when the user typed a question, clicked Ask, then switched tabs. If the
+  // token has expired the call rejects silently.
+  useEffect(() => {
+    if (!canFloat || pip.isOpen) return;
+    function onVis() {
+      if (document.visibilityState === "hidden" && !pip.isOpen) {
+        pip.open().catch(() => {});
+      }
+    }
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [canFloat, pip]);
+
   async function startShare() {
     setError(null);
     if (!canScreenShare) {
@@ -187,6 +202,14 @@ export function ScreenShare() {
     if (!capture || !question.trim()) return;
     setSubmittedCapture(capture);
     setSubmittedQuestion(question.trim());
+    // Use the click's user-activation token to open the floating panel so the
+    // user can switch apps while the answer streams.
+    if (canFloat && !pip.isOpen) {
+      pip.open().catch(() => {
+        // PiP may be unsupported or blocked — fall through silently and the
+        // panel stays inline.
+      });
+    }
   }
 
   function reset() {
@@ -251,14 +274,32 @@ export function ScreenShare() {
       </header>
 
       {capture ? (
-        <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`data:${capture.mime};base64,${capture.base64}`}
             alt="Captured screen frame"
             className="max-h-48 w-full object-contain bg-black"
           />
+          {stream ? (
+            <button
+              type="button"
+              onClick={captureFrame}
+              className="absolute right-2 top-2 rounded-md bg-[#08090f]/80 px-2 py-1 text-[11px] font-semibold text-cyan-200 backdrop-blur transition hover:bg-[#08090f]"
+              title="Grab a fresh frame from the shared screen"
+            >
+              📸 Recapture
+            </button>
+          ) : null}
         </div>
+      ) : stream ? (
+        <button
+          type="button"
+          onClick={captureFrame}
+          className="w-full rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/15"
+        >
+          📸 Capture frame from shared screen
+        </button>
       ) : (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-sm text-zinc-500">
           Capture a frame from your shared screen above.
