@@ -3,25 +3,31 @@
 > Share your screen. Ask anything. AI sees what you see.
 
 **Tunjuk** ("show / point" in Bahasa Malaysia) is an open-source, web-based AI
-screen tutor. Inspired by [Farza Majeed's Clicky](https://github.com/farzaa/clicky),
-rebuilt for any browser on [Chutes](https://chutes.ai). Each user pays for their
-own AI inference through *Sign in with Chutes*, so the project stays free to
+screen tutor. Pick any window, ask any question — Tunjuk reads the frame and
+answers out loud. Built on [Chutes](https://chutes.ai) so every user pays for
+their own inference; the project itself holds no credits and stays free to
 host forever.
 
-Built for [Chutes Hack Malaysia 2026](https://luma.com/gdre3p9z), at the
-suggestion of the Chutes team.
+Built for [Chutes Hack Malaysia 2026](https://luma.com/gdre3p9z).
 
 ## Why this exists
 
-The original Clicky is a delightful native macOS app that watches your screen
-and answers spoken questions through Anthropic, AssemblyAI, and ElevenLabs.
-Every user costs the developer money in inference fees, so Farza had to put
-new development behind a paywall.
+Most AI assistants either lock you into a desktop app, mediate every request
+through a vendor's wallet, or hide what model actually answered you. Tunjuk
+takes the opposite stance:
 
-Tunjuk solves that with **Sign in with Chutes** — a Chutes-only feature where
-the user's `chutes:invoke` OAuth scope routes inference billing to the user's
-own Chutes account. No developer subsidy. No subscription wall. Scales to
-infinite users at zero ongoing inference cost to the project.
+- **Browser-native.** No install, no extension, no native binary. If your
+  browser can screen-share, Tunjuk works.
+- **You pay for what you use.** Sign in with Chutes once. The `chutes:invoke`
+  OAuth scope routes every inference call to your own Chutes account. No
+  developer subsidy, no subscription wall, no per-seat pricing.
+- **Verifiable execution.** When a TEE-attested vision model is available,
+  Tunjuk pins it and surfaces a hardware-attested "Confidential Compute"
+  badge — your shared screen is processed inside an Intel TDX enclave that
+  the operator cannot read into.
+- **Nothing persisted.** No database, no logs, no analytics. Sessions live in
+  an AES-GCM sealed HTTP-only cookie; screen captures live in browser memory
+  and are sent exactly once per question.
 
 ## How it works
 
@@ -31,20 +37,21 @@ Browser → Next.js (Vercel) → Chutes
    │            ├─ /api/auth/*  ├─ /idp/authorize, /idp/token, /idp/userinfo
    │            └─ /api/ask     └─ /v1/models, /v1/chat/completions
    │
-   ├─ getDisplayMedia()  (screen-share)
-   ├─ canvas.toDataURL() (frame extraction)
-   └─ Web Speech API     (voice input + text-to-speech)
+   ├─ getDisplayMedia()           (screen-share — tab/window/screen)
+   ├─ canvas.toDataURL()          (frame extraction)
+   ├─ Document Picture-in-Picture (floating ask panel)
+   └─ Web Speech API              (voice input + text-to-speech)
 ```
 
-When a TEE-capable vision model is available, Tunjuk pins it automatically and
-surfaces a small "Confidential Compute" badge on each answer. The badge proves
-the *execution environment* is hardware-isolated (Intel TDX); it does not
-prove the AI's fairness or correctness.
+The vision picker reads `/v1/models`, prefers entries with `input_modalities`
+containing `"image"`, and biases toward `confidential_compute: true` (or a
+`-TEE` id suffix). The chosen model id is returned to the browser on every
+answer so you can verify what ran.
 
 ## Quick start (local)
 
 ```bash
-git clone https://github.com/<your-username>/tunjuk
+git clone https://github.com/FarhanDulvi/tunjuk
 cd tunjuk
 npm install
 
@@ -91,6 +98,8 @@ src/
     api/auth/logout   Clears session cookie
     api/auth/me       Returns current user info
     api/ask           Streams a vision answer for {question, imageBase64}
+    api/summarise     Generates an end-of-session digest
+    api/debug/models  Lists vision-capable models the picker can pick
     app/page.tsx      Protected main app (screen share + ask UI)
     page.tsx          Landing page
     layout.tsx        Root layout
@@ -100,7 +109,10 @@ src/
     voice-input.tsx        Web Speech API STT
     answer-stream.tsx      SSE parsing + render
     attestation-badge.tsx  TEE indicator with honest copy
+    persistence-badge.tsx  "Nothing persisted" indicator
     tts-player.tsx         Web Speech API TTS
+    pip-portal.tsx         Document Picture-in-Picture portal
+    tunjuk-mark.tsx        Viewfinder reticle brand mark
   lib/
     chutes.ts       Model selection + streaming vision client
     env.ts          Typed env access
@@ -121,15 +133,18 @@ The fastest path is Vercel:
 
 MIT. See [LICENSE](./LICENSE).
 
-## Credits
-
-- [Farza Majeed](https://github.com/farzaa) for the original Clicky.
-- The [Chutes](https://chutes.ai) team — the Clicky-on-Chutes idea came directly from them.
-- [Nyala Labs](https://luma.com/user/nyala) for organizing Chutes Hack Malaysia 2026.
-
 ## Honest scope notes
 
-- **Voice input** uses the browser's Web Speech API. Works on Chrome and Edge reliably; Safari has prefix support; Firefox falls back to text input.
-- **TTS** uses the browser's `speechSynthesis`. Voices vary by OS.
-- **Attestation** badge appears when the chosen Chutes model exposes `confidential_compute: true`. The badge proves the *execution environment* is hardware-isolated; it does **not** prove the AI's fairness, accuracy, or determinism.
-- **No data persistence**. Sessions live in an encrypted HTTP-only cookie. Screen captures live only in browser memory and are sent once per question.
+- **Voice input** uses the browser's Web Speech API. Works reliably on Chrome
+  and Edge; Safari has prefix support; Firefox falls back to typed input.
+- **TTS** uses the browser's `speechSynthesis`. Voices vary by OS. Tunjuk
+  never auto-reads — you click **Speak** to listen.
+- **Floating panel** uses the Document Picture-in-Picture API (Chromium-only
+  today). The captured frame excludes the floating panel even when sharing
+  the whole screen.
+- **Attestation** badge appears when the chosen Chutes model exposes
+  `confidential_compute: true` or a `-TEE` id suffix. The badge proves the
+  *execution environment* is hardware-isolated; it does **not** prove the
+  AI's fairness, accuracy, or determinism.
+- **No data persistence.** Sessions live in an encrypted HTTP-only cookie.
+  Screen captures live only in browser memory and are sent once per question.

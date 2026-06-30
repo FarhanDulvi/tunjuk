@@ -301,7 +301,7 @@ export function ScreenShare() {
           <img
             src={`data:${capture.mime};base64,${capture.base64}`}
             alt="Captured screen frame"
-            className="max-h-48 w-full object-contain bg-black"
+            className="max-h-48 w-full object-contain bg-[#0a0d18]"
           />
           {stream ? (
             <button
@@ -507,10 +507,10 @@ export function ScreenShare() {
               autoPlay
               muted
               playsInline
-              className="aspect-video w-full bg-black"
+              className="aspect-video w-full bg-[#0a0d18]"
             />
           ) : capture ? (
-            <div className="flex aspect-video w-full items-center justify-center bg-black">
+            <div className="flex aspect-video w-full items-center justify-center bg-[#0a0d18]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`data:${capture.mime};base64,${capture.base64}`}
