@@ -71,11 +71,27 @@ export const env = {
   get CHUTES_DEMO_KEY() {
     return process.env.CHUTES_DEMO_KEY ?? "";
   },
+  // Accept whichever name the Vercel Upstash marketplace integration used —
+  // depending on the chosen prefix Vercel may inject any of these. First match
+  // wins; empty string = no Upstash configured.
   get UPSTASH_REDIS_REST_URL() {
-    return process.env.UPSTASH_REDIS_REST_URL ?? "";
+    return (
+      process.env.UPSTASH_REDIS_REST_URL ??
+      process.env.UPSTASH_REDIS_KV_REST_API_URL ??
+      process.env.UPSTASH_REDIS_KV_URL ??
+      process.env.KV_REST_API_URL ??
+      process.env.STORAGE_KV_REST_API_URL ??
+      ""
+    );
   },
   get UPSTASH_REDIS_REST_TOKEN() {
-    return process.env.UPSTASH_REDIS_REST_TOKEN ?? "";
+    return (
+      process.env.UPSTASH_REDIS_REST_TOKEN ??
+      process.env.UPSTASH_REDIS_KV_REST_API_TOKEN ??
+      process.env.KV_REST_API_TOKEN ??
+      process.env.STORAGE_KV_REST_API_TOKEN ??
+      ""
+    );
   },
 };
 

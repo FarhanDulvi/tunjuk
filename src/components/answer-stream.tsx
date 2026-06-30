@@ -51,6 +51,12 @@ export function AnswerStream({
     setTotalMs(null);
     setAnnotations([]);
 
+    // Hard timeout — if no first token arrives in 90s, abort with a friendly
+    // error so the UI doesn't sit on "Thinking…" forever when upstream hangs.
+    const watchdog = window.setTimeout(() => {
+      controller.abort();
+    }, 90_000);
+
     async function run() {
       const startedAt = performance.now();
       try {
@@ -89,6 +95,7 @@ export function AnswerStream({
             if (!line.startsWith("data:")) continue;
             const payload = line.slice(5).trim();
             if (payload === "[DONE]") {
+              window.clearTimeout(watchdog);
               if (!cancelled) {
                 setTotalMs(performance.now() - startedAt);
                 setDone(true);
@@ -105,6 +112,8 @@ export function AnswerStream({
               const chunk = JSON.parse(payload) as DeltaChunk;
               const delta = chunk.choices?.[0]?.delta?.content;
               if (delta) {
+                // First token arrived — model is alive, stop the watchdog.
+                window.clearTimeout(watchdog);
                 if (!cancelled) {
                   setTtfbMs((prev) =>
                     prev == null ? performance.now() - startedAt : prev,
@@ -117,14 +126,26 @@ export function AnswerStream({
             }
           }
         }
+        window.clearTimeout(watchdog);
         if (!cancelled) {
           setTotalMs(performance.now() - startedAt);
           setDone(true);
           onDoneRef.current?.();
         }
       } catch (err) {
+        window.clearTimeout(watchdog);
         const e = err instanceof Error ? err : new Error(String(err));
-        if (cancelled || e.name === "AbortError") return;
+        // If the watchdog fired we get AbortError but the component is still
+        // mounted — surface a timeout-specific message instead of going silent.
+        if (e.name === "AbortError") {
+          if (cancelled) return;
+          setError(
+            "Tunjuk timed out waiting for the first token (90s). The model may be cold-starting, your Chutes wallet may be empty, or the demo tier is not configured. Try again, or top up at https://chutes.ai/billing.",
+          );
+          setDone(true);
+          return;
+        }
+        if (cancelled) return;
         setError(e.message);
         setDone(true);
       }
@@ -133,6 +154,7 @@ export function AnswerStream({
     run();
     return () => {
       cancelled = true;
+      window.clearTimeout(watchdog);
       controller.abort();
     };
   }, [question, imageBase64, mimeType]);
