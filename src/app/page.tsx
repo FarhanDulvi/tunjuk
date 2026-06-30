@@ -1,22 +1,16 @@
 import Link from "next/link";
 import { readSession } from "@/lib/session";
-import { SignInButton } from "@/components/sign-in-button";
 import { TunjukMark } from "@/components/tunjuk-mark";
+import { HeroIntro } from "@/components/hero-intro";
+import { HowItWorks } from "@/components/how-it-works";
+import { TubesBackground } from "@/components/tubes-background";
+import { Reveal } from "@/components/reveal";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<{ error?: string; error_detail?: string }>;
 }
-
-const ERROR_COPY: Record<string, string> = {
-  missing_code: "OAuth response was missing the authorization code.",
-  bad_state: "OAuth state mismatch — sign in again.",
-  token_parse_failed: "Could not parse the token response from Chutes.",
-  token_exchange_failed: "Chutes rejected the token exchange.",
-  chutes_request_failed: "Could not reach Chutes inference.",
-  unauthorized: "Your session expired — please sign in again.",
-};
 
 export default async function Home({ searchParams }: PageProps) {
   const { error, error_detail } = await searchParams;
@@ -49,7 +43,7 @@ export default async function Home({ searchParams }: PageProps) {
           {session ? (
             <Link
               href="/app"
-              className="rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-semibold text-[#08090f] transition hover:bg-cyan-400"
+              className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-[#0a0a0a] transition hover:bg-brand-400"
             >
               Open app →
             </Link>
@@ -57,58 +51,17 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </nav>
 
-      <section className="mb-28 flex flex-col items-start">
-        <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-cyan-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-          Powered by Chutes confidential compute
-        </span>
-        <h1 className="mb-6 max-w-4xl text-6xl font-bold leading-[1.05] tracking-tight text-white sm:text-7xl">
-          AI that watches{" "}
-          <span className="bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent">
-            your screen
-          </span>{" "}
-          and tells you what to do.
-        </h1>
-        <p className="mb-10 max-w-2xl text-xl leading-relaxed text-zinc-400">
-          Share any window. Ask anything. Tunjuk reads what you see and answers
-          out loud — privately, on hardware-isolated GPUs, billed to your own
-          Chutes wallet.
-        </p>
+      <HeroIntro
+        hasSession={!!session}
+        error={error}
+        errorDetail={error_detail}
+      />
 
-        {error && ERROR_COPY[error] ? (
-          <div className="mb-8 w-full max-w-2xl rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
-            <div className="font-semibold">{ERROR_COPY[error]}</div>
-            {error_detail ? (
-              <div className="mt-1 font-mono text-xs text-amber-300/70">
-                {error_detail}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+      <Reveal className="mb-28">
+        <TubesBackground className="h-[380px] sm:h-[460px]" />
+      </Reveal>
 
-        <div className="flex flex-wrap items-center gap-4">
-          {session ? (
-            <Link
-              href="/app"
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3.5 text-base font-semibold text-[#08090f] shadow-[0_0_40px_-12px_rgba(34,211,238,0.6)] transition hover:bg-cyan-400"
-            >
-              Open Tunjuk →
-            </Link>
-          ) : (
-            <SignInButton />
-          )}
-          <a
-            href="https://github.com/FarhanDulvi/tunjuk"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3.5 text-base font-medium text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08]"
-          >
-            View source
-          </a>
-        </div>
-      </section>
-
-      <section className="mb-28 grid gap-4 sm:grid-cols-3">
+      <Reveal className="mb-28 grid gap-4 sm:grid-cols-3">
         {[
           {
             title: "Bring your own compute",
@@ -125,57 +78,22 @@ export default async function Home({ searchParams }: PageProps) {
         ].map((card) => (
           <div
             key={card.title}
-            className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-white/20 hover:bg-white/[0.05]"
+            className="group relative overflow-hidden rounded-xl border border-white/10 bg-[#0d0f12] p-6 transition hover:border-white/20 hover:bg-[#13161b]"
           >
-            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand-400/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
             <h3 className="mb-2 text-base font-semibold text-white">
               {card.title}
             </h3>
             <p className="text-sm leading-relaxed text-zinc-400">{card.body}</p>
           </div>
         ))}
-      </section>
+      </Reveal>
 
-      <section className="mb-28">
-        <h2 className="mb-10 text-3xl font-bold tracking-tight text-white">
-          How it works
-        </h2>
-        <ol className="grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] sm:grid-cols-4">
-          {[
-            {
-              n: "01",
-              title: "Sign in with Chutes",
-              body: "PKCE OAuth scoped to chutes:invoke.",
-            },
-            {
-              n: "02",
-              title: "Share a screen",
-              body: "A browser tab, a window, or a screenshot upload.",
-            },
-            {
-              n: "03",
-              title: "Ask out loud",
-              body: "Web Speech transcribes your question on-device.",
-            },
-            {
-              n: "04",
-              title: "Get an answer",
-              body: "Streams from a confidential-compute vision model on your Chutes account.",
-            },
-          ].map((step) => (
-            <li
-              key={step.n}
-              className="flex flex-col gap-3 bg-[#0a0d18] p-6"
-            >
-              <span className="font-mono text-xs text-cyan-400">{step.n}</span>
-              <h3 className="text-sm font-semibold text-white">{step.title}</h3>
-              <p className="text-sm leading-relaxed text-zinc-400">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <Reveal className="mb-28">
+        <HowItWorks />
+      </Reveal>
 
-      <section className="mb-20 grid gap-8 rounded-2xl border border-white/10 bg-white/[0.03] p-8 sm:grid-cols-2 sm:p-12">
+      <Reveal className="mb-20 grid gap-8 rounded-2xl border border-white/10 bg-[#0d0f12] p-8 sm:grid-cols-2 sm:p-12">
         <div>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-white">
             Built on what you can verify.
@@ -195,12 +113,12 @@ export default async function Home({ searchParams }: PageProps) {
             "MIT-licensed. Fork it and deploy your own in one click.",
           ].map((b) => (
             <li key={b} className="flex items-start gap-3">
-              <span className="mt-1 text-cyan-400">✓</span>
+              <span className="mt-1 text-brand-400">✓</span>
               <span>{b}</span>
             </li>
           ))}
         </ul>
-      </section>
+      </Reveal>
 
       <footer className="mt-auto border-t border-white/10 pt-8 text-xs text-zinc-500">
         <div className="flex flex-wrap items-center justify-between gap-4">

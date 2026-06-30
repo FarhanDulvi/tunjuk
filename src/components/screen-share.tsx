@@ -311,7 +311,7 @@ export function ScreenShare() {
     <section className="space-y-4">
       <header className="space-y-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
             02 — Ask Tunjuk
           </h2>
           {quota?.enabled ? (
@@ -319,7 +319,7 @@ export function ScreenShare() {
               className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono ${
                 quota.used >= quota.limit
                   ? "border-red-500/30 bg-red-500/10 text-red-300"
-                  : "border-cyan-400/20 bg-cyan-400/5 text-cyan-300"
+                  : "border-brand-400/20 bg-brand-400/5 text-brand-300"
               }`}
               title={`${quota.used >= quota.limit ? "Demo allowance used up — top up your Chutes wallet to keep going." : "Free Tunjuk-sponsored prompts available before you need to top up your Chutes wallet."}`}
             >
@@ -346,7 +346,7 @@ export function ScreenShare() {
             <button
               type="button"
               onClick={captureFrame}
-              className="absolute right-2 top-2 rounded-md bg-[#08090f]/80 px-2 py-1 text-[11px] font-semibold text-cyan-200 backdrop-blur transition hover:bg-[#08090f]"
+              className="absolute right-2 top-2 rounded-md bg-[#08090f]/80 px-2 py-1 text-[11px] font-semibold text-brand-200 backdrop-blur transition hover:bg-[#08090f]"
               title="Grab a fresh frame from the shared screen"
             >
               📸 Recapture
@@ -357,7 +357,7 @@ export function ScreenShare() {
         <button
           type="button"
           onClick={captureFrame}
-          className="w-full rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/15"
+          className="w-full rounded-lg border border-brand-400/30 bg-brand-400/10 px-4 py-3 text-sm font-semibold text-brand-200 transition hover:bg-brand-400/15"
         >
           📸 Capture frame from shared screen
         </button>
@@ -377,7 +377,7 @@ export function ScreenShare() {
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="e.g. How do I add auto-layout to this frame?"
           aria-label="Your question for Tunjuk"
-          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-600 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
           rows={3}
         />
         <div className="flex items-center justify-between gap-2">
@@ -386,7 +386,7 @@ export function ScreenShare() {
             type="button"
             onClick={submit}
             disabled={!capture || !question.trim()}
-            className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(34,211,238,0.6)] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none"
+            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(99, 210, 151,0.6)] transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none"
           >
             Ask Tunjuk →
           </button>
@@ -436,14 +436,14 @@ export function ScreenShare() {
         ) : null}
 
         {summary ? (
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+          <div className="rounded-xl border border-brand-400/20 bg-brand-400/5 p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+              <h4 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-300">
                 Session summary
               </h4>
               {summaryModelId ? (
                 <span
-                  className="rounded-full border border-cyan-400/20 bg-[#08090f] px-2 py-0.5 text-[10px] font-mono text-cyan-200"
+                  className="rounded-full border border-brand-400/20 bg-[#08090f] px-2 py-0.5 text-[10px] font-mono text-brand-200"
                   title={summaryModelId}
                 >
                   {summaryModelId.length > 32
@@ -465,7 +465,7 @@ export function ScreenShare() {
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-4">
         <header className="space-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
             01 — Share your screen
           </h2>
           <p className="text-sm text-zinc-400">
@@ -488,7 +488,7 @@ export function ScreenShare() {
               <button
                 type="button"
                 onClick={captureFrame}
-                className="rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(34,211,238,0.6)] transition hover:bg-cyan-400"
+                className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-[#08090f] shadow-[0_0_24px_-12px_rgba(99, 210, 151,0.6)] transition hover:bg-brand-400"
               >
                 📸 Capture frame
               </button>
@@ -505,7 +505,7 @@ export function ScreenShare() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-cyan-400/40 hover:text-cyan-300"
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-brand-400/40 hover:text-brand-300"
           >
             Upload a screenshot
           </button>
@@ -513,7 +513,7 @@ export function ScreenShare() {
             <button
               type="button"
               onClick={openFloating}
-              className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-400/15"
+              className="rounded-lg border border-brand-400/30 bg-brand-400/10 px-4 py-2.5 text-sm font-semibold text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-400/15"
               title="Open the Ask Tunjuk panel in a floating Picture-in-Picture window so you can switch apps while reading the answer."
             >
               📌 Float panel
@@ -580,13 +580,13 @@ export function ScreenShare() {
         <button
           type="button"
           onClick={pip.close}
-          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cyan-400/30 bg-cyan-400/5 p-6 text-center text-sm text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-400/10"
+          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-400/30 bg-brand-400/5 p-6 text-center text-sm text-brand-200 transition hover:border-brand-400/50 hover:bg-brand-400/10"
         >
           <span className="text-2xl">📌</span>
           <span className="font-semibold">
             Panel is floating in a separate window
           </span>
-          <span className="text-xs text-cyan-300/80">
+          <span className="text-xs text-brand-300/80">
             Click here to close the floating window and return the panel in
             place.
           </span>

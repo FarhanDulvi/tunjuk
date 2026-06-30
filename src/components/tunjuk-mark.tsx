@@ -30,7 +30,7 @@ export function TunjukMark({ size = 24, className = "", pulse = false }: Props) 
         cx="16"
         cy="16"
         r="2"
-        fill="#22d3ee"
+        fill="#63d297"
         stroke="none"
         className={pulse ? "tunjuk-pulse" : ""}
       />

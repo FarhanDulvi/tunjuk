@@ -20,12 +20,12 @@ export function AnnotatedScreenshot({
   if (!annotations.length) return null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-cyan-400/30 bg-[#0a0d18] shadow-[0_0_30px_-12px_rgba(34,211,238,0.35)]">
-      <div className="flex items-center justify-between border-b border-cyan-400/20 bg-cyan-400/5 px-3 py-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+    <div className="overflow-hidden rounded-xl border border-brand-400/30 bg-[#0a0d18] shadow-[0_0_30px_-12px_rgba(99, 210, 151,0.35)]">
+      <div className="flex items-center justify-between border-b border-brand-400/20 bg-brand-400/5 px-3 py-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-300">
           Where to look
         </span>
-        <span className="text-[10px] font-mono text-cyan-300/70">
+        <span className="text-[10px] font-mono text-brand-300/70">
           {annotations.length} {annotations.length === 1 ? "region" : "regions"}
         </span>
       </div>
@@ -49,8 +49,8 @@ export function AnnotatedScreenshot({
                 y={a.y * 100}
                 width={a.w * 100}
                 height={a.h * 100}
-                fill="rgba(34, 211, 238, 0.10)"
-                stroke="#22d3ee"
+                fill="rgba(99, 210, 151, 0.10)"
+                stroke="#63d297"
                 strokeWidth="2"
                 strokeDasharray="6 3"
                 vectorEffect="non-scaling-stroke"
@@ -67,7 +67,7 @@ export function AnnotatedScreenshot({
           return (
             <span
               key={i}
-              className="pointer-events-none absolute rounded-md bg-cyan-400 px-1.5 py-0.5 text-[10px] font-semibold text-[#08090f] shadow-[0_4px_12px_-2px_rgba(34,211,238,0.5)]"
+              className="pointer-events-none absolute rounded-md bg-brand-400 px-1.5 py-0.5 text-[10px] font-semibold text-[#08090f] shadow-[0_4px_12px_-2px_rgba(99, 210, 151,0.5)]"
               style={{
                 left: `${a.x * 100}%`,
                 top,
