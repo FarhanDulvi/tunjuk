@@ -117,12 +117,12 @@ export function ScreenShare() {
       return;
     }
     try {
-      // Hint the picker toward tab-share. When a user picks a specific tab, the
-      // captured surface is that tab's compositor output — the floating panel
-      // (a separate browser window) is never in the frame. For screen/window
-      // shares we additionally hide the PiP body during capture below.
+      // No displaySurface constraint — the browser picker offers all surfaces
+      // (tab, window, entire screen). The captureFrame() function hides the
+      // floating panel during capture so it is excluded from the frame
+      // regardless of which surface the user picked.
       const next = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15, displaySurface: "browser" } as MediaTrackConstraints,
+        video: { frameRate: 15 },
         audio: false,
       });
       setStream(next);
