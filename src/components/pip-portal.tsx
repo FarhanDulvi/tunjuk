@@ -35,11 +35,23 @@ function mirrorStyles(target: Window) {
   const targetDoc = target.document;
 
   targetDoc.documentElement.lang = document.documentElement.lang || "en";
+  targetDoc.documentElement.style.background = "#08090f";
   targetDoc.body.style.margin = "0";
-  targetDoc.body.style.background = "#ffffff";
-  targetDoc.body.style.color = "#0f172a"; // slate-900
+  targetDoc.body.style.background = "#08090f";
+  targetDoc.body.style.color = "#f4f4f5"; // zinc-100
   targetDoc.body.style.fontFamily =
-    getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+    getComputedStyle(document.body).fontFamily ||
+    "system-ui, -apple-system, sans-serif";
+  // Selection + scrollbar tuned to dark.
+  const sheet = targetDoc.createElement("style");
+  sheet.textContent = `
+    ::selection { background: rgba(34,211,238,0.3); color: #f4f4f5; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0c1020; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
+  `;
+  targetDoc.head.appendChild(sheet);
 
   const charset = targetDoc.createElement("meta");
   charset.setAttribute("charset", "utf-8");

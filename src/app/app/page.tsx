@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/session";
 import { ScreenShare } from "@/components/screen-share";
+import { TunjukMark } from "@/components/tunjuk-mark";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +24,7 @@ export default async function AppPage() {
           href="/"
           className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-200 transition hover:text-white"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-cyan-400 to-indigo-500 text-base font-bold text-[#08090f]">
-            T
-          </span>
+          <TunjukMark size={26} className="text-zinc-300" pulse />
           <span>Tunjuk</span>
           <span className="ml-3 text-xs font-normal text-zinc-500">
             signed in as{" "}

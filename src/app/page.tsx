@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { readSession } from "@/lib/session";
 import { SignInButton } from "@/components/sign-in-button";
+import { TunjukMark } from "@/components/tunjuk-mark";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,8 @@ export default async function Home({ searchParams }: PageProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10">
       <nav className="mb-20 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-200">
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-cyan-400 to-indigo-500 text-base font-bold text-[#08090f]">
-            T
-          </span>
+        <div className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-zinc-200">
+          <TunjukMark size={26} className="text-zinc-300" pulse />
           <span>Tunjuk</span>
         </div>
         <div className="flex items-center gap-4 text-sm text-zinc-400">
