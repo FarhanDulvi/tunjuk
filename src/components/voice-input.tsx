@@ -110,7 +110,7 @@ export function VoiceInput({ onTranscript }: Props) {
 
   if (!supported) {
     return (
-      <span className="text-xs text-slate-500">
+      <span className="text-xs text-zinc-500">
         Voice not supported in this browser
       </span>
     );
@@ -122,8 +122,8 @@ export function VoiceInput({ onTranscript }: Props) {
       onClick={listening ? stop : start}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
         listening
-          ? "border-red-300 bg-red-50 text-red-700 animate-pulse"
-          : "border-slate-300 text-slate-700 hover:bg-slate-100"
+          ? "border-red-500/30 bg-red-500/10 text-red-300 animate-pulse"
+          : "border-white/10 bg-white/[0.04] text-zinc-300 hover:border-white/20 hover:bg-white/[0.08]"
       }`}
       aria-pressed={listening}
       aria-label={listening ? "Stop voice input" : "Start voice input"}

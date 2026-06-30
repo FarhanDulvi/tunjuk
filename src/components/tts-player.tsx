@@ -55,7 +55,7 @@ export function TtsPlayer({ text, autoPlay = false }: Props) {
     <button
       type="button"
       onClick={playing ? stop : play}
-      className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.08]"
       aria-label={playing ? "Stop speaking" : "Speak answer"}
     >
       <span aria-hidden>{playing ? "⏹" : "▶"}</span>

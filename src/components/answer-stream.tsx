@@ -158,7 +158,7 @@ export function AnswerStream({
               ⚡ {(ttfbMs / 1000).toFixed(1)}s · {(totalMs / 1000).toFixed(1)}s total
             </span>
           ) : null}
-          {done && text ? <TtsPlayer text={text} autoPlay /> : null}
+          {done && text ? <TtsPlayer text={text} /> : null}
         </div>
       </header>
       {error ? (

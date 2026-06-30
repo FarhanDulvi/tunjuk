@@ -117,8 +117,12 @@ export function ScreenShare() {
       return;
     }
     try {
+      // Hint the picker toward tab-share. When a user picks a specific tab, the
+      // captured surface is that tab's compositor output — the floating panel
+      // (a separate browser window) is never in the frame. For screen/window
+      // shares we additionally hide the PiP body during capture below.
       const next = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15 },
+        video: { frameRate: 15, displaySurface: "browser" } as MediaTrackConstraints,
         audio: false,
       });
       setStream(next);
@@ -178,7 +182,7 @@ export function ScreenShare() {
     e.preventDefault();
   }
 
-  function captureFrame() {
+  async function captureFrame() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -188,13 +192,31 @@ export function ScreenShare() {
       setError("Screen share is not ready yet — wait a moment and try again.");
       return;
     }
+
+    // If the floating panel is open AND the user is sharing the whole screen or
+    // a window (not a tab), the panel will be visible to the OS compositor and
+    // show up in the captured frame. Hide it for one repaint cycle so the
+    // grabbed frame shows only the underlying page.
+    const pipBody = pip.container?.ownerDocument?.body ?? null;
+    const prevVis = pipBody?.style.visibility ?? "";
+    if (pipBody) {
+      pipBody.style.visibility = "hidden";
+      await new Promise<void>((r) => setTimeout(r, 200));
+    }
+
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      if (pipBody) pipBody.style.visibility = prevVis;
+      return;
+    }
     ctx.drawImage(video, 0, 0, w, h);
     const dataUrl = canvas.toDataURL("image/png");
     const base64 = dataUrl.split(",")[1] ?? "";
+
+    if (pipBody) pipBody.style.visibility = prevVis;
+
     setCapture({ base64, mime: "image/png" });
   }
 
