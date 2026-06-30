@@ -183,3 +183,120 @@ export async function streamVisionAnswer(
 
   return { upstream, modelId, isConfidential };
 }
+
+export interface Annotation {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+}
+
+export interface AnnotateInput {
+  accessToken: string;
+  imageBase64: string;
+  imageMime: string;
+  question: string;
+  answer: string;
+}
+
+// Ask the vision model to mark up to 3 regions of the screenshot the answer
+// refers to. Returns an empty array on any failure or low confidence —
+// annotations are optional polish and must never break the main answer flow.
+export async function getAnnotations(
+  input: AnnotateInput,
+): Promise<{ annotations: Annotation[]; modelId: string }> {
+  const picked = await pickVisionModel(input.accessToken);
+  const systemPrompt = [
+    "You are an annotation helper for a screen tutor.",
+    "You receive a screenshot, a user's question, and the textual answer that was given.",
+    "Identify up to 3 distinct UI regions in the screenshot that the answer is pointing at.",
+    "Coordinates MUST be fractional from 0 to 1 with (0,0) at the top-left of the image.",
+    "Each region has x, y (top-left corner), w, h (width, height), and a short label (max 24 chars) describing what to do there.",
+    "If the answer is generic or you cannot locate specific regions with high confidence, return an empty annotations array.",
+    'Reply with ONLY valid JSON in this exact shape and nothing else: {"annotations":[{"x":0.1,"y":0.2,"w":0.1,"h":0.05,"label":"Settings"}]}',
+    "Do not wrap the JSON in markdown fences. Do not explain it.",
+  ].join(" ");
+
+  const userText = `Question: ${input.question}\n\nAnswer: ${input.answer}\n\nMark the UI regions the answer is pointing at.`;
+
+  const body = {
+    model: picked.id,
+    stream: false,
+    max_tokens: 400,
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: userText },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${input.imageMime};base64,${input.imageBase64}`,
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const r = await fetch(`${env.CHUTES_INFERENCE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!r.ok) {
+    throw new Error(
+      `Chutes annotate failed: ${r.status} ${await r.text().catch(() => "")}`,
+    );
+  }
+
+  const json = (await r.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = json.choices?.[0]?.message?.content ?? "";
+
+  return { annotations: parseAnnotations(content), modelId: picked.id };
+}
+
+function parseAnnotations(content: string): Annotation[] {
+  const match = content.match(/\{[\s\S]*?"annotations"[\s\S]*\}/);
+  if (!match) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch {
+    return [];
+  }
+  if (!parsed || typeof parsed !== "object") return [];
+  const arr = (parsed as { annotations?: unknown }).annotations;
+  if (!Array.isArray(arr)) return [];
+  const out: Annotation[] = [];
+  for (const item of arr) {
+    if (!item || typeof item !== "object") continue;
+    const a = item as Record<string, unknown>;
+    const x = typeof a.x === "number" ? a.x : NaN;
+    const y = typeof a.y === "number" ? a.y : NaN;
+    const w = typeof a.w === "number" ? a.w : NaN;
+    const h = typeof a.h === "number" ? a.h : NaN;
+    const label = typeof a.label === "string" ? a.label.slice(0, 32) : "";
+    if (
+      !Number.isFinite(x) || x < 0 || x > 1 ||
+      !Number.isFinite(y) || y < 0 || y > 1 ||
+      !Number.isFinite(w) || w <= 0 || w > 1 ||
+      !Number.isFinite(h) || h <= 0 || h > 1 ||
+      x + w > 1.001 || y + h > 1.001 ||
+      !label
+    ) {
+      continue;
+    }
+    out.push({ x, y, w, h, label });
+    if (out.length >= 3) break;
+  }
+  return out;
+}

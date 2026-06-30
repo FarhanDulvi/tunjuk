@@ -64,6 +64,19 @@ export const env = {
   get SESSION_SECRET() {
     return required("SESSION_SECRET", process.env.SESSION_SECRET);
   },
+  // Demo tier — all three must be set for the per-user 20-prompt allowance
+  // to activate. When any is missing, isDemoEnabled() returns false and the
+  // /api/ask route serves a friendly "top up your Chutes wallet" error
+  // instead of attempting a fallback.
+  get CHUTES_DEMO_KEY() {
+    return process.env.CHUTES_DEMO_KEY ?? "";
+  },
+  get UPSTASH_REDIS_REST_URL() {
+    return process.env.UPSTASH_REDIS_REST_URL ?? "";
+  },
+  get UPSTASH_REDIS_REST_TOKEN() {
+    return process.env.UPSTASH_REDIS_REST_TOKEN ?? "";
+  },
 };
 
 export function callbackUrl(): string {

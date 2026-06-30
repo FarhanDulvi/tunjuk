@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { AttestationBadge } from "@/components/attestation-badge";
 import { PersistenceBadge } from "@/components/persistence-badge";
 import { TtsPlayer } from "@/components/tts-player";
+import { AnnotatedScreenshot } from "@/components/annotated-screenshot";
+import type { Annotation } from "@/lib/chutes";
 
 interface Props {
   question: string;
@@ -33,6 +35,7 @@ export function AnswerStream({
   const [done, setDone] = useState(false);
   const [ttfbMs, setTtfbMs] = useState<number | null>(null);
   const [totalMs, setTotalMs] = useState<number | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -46,6 +49,7 @@ export function AnswerStream({
     setDone(false);
     setTtfbMs(null);
     setTotalMs(null);
+    setAnnotations([]);
 
     async function run() {
       const startedAt = performance.now();
@@ -133,6 +137,38 @@ export function AnswerStream({
     };
   }, [question, imageBase64, mimeType]);
 
+  // After the streaming answer completes, fire one non-streaming call to ask
+  // the model where to point in the screenshot. Failure is silent — the
+  // answer panel just renders without arrows.
+  useEffect(() => {
+    if (!done || !text || error) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/annotate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64,
+            imageMime: mimeType,
+            question,
+            answer: text,
+          }),
+        });
+        if (cancelled || !r.ok) return;
+        const j = (await r.json()) as { annotations?: Annotation[] };
+        if (Array.isArray(j.annotations) && !cancelled) {
+          setAnnotations(j.annotations);
+        }
+      } catch {
+        // ignore — annotations are optional
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [done, text, error, imageBase64, mimeType, question]);
+
   return (
     <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -170,6 +206,15 @@ export function AnswerStream({
           {text || (done ? "(empty response)" : "Thinking…")}
         </p>
       )}
+      {annotations.length > 0 ? (
+        <div className="mt-4">
+          <AnnotatedScreenshot
+            imageBase64={imageBase64}
+            mimeType={mimeType}
+            annotations={annotations}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

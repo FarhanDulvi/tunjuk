@@ -20,6 +20,12 @@ interface TranscriptEntry {
   a: string;
 }
 
+interface QuotaInfo {
+  enabled: boolean;
+  used: number;
+  limit: number;
+}
+
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
 export function ScreenShare() {
@@ -41,6 +47,7 @@ export function ScreenShare() {
     null,
   );
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryModelId, setSummaryModelId] = useState<string | null>(null);
   const [summarising, setSummarising] = useState(false);
@@ -92,6 +99,21 @@ export function ScreenShare() {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
+
+  const fetchQuota = useCallback(async () => {
+    try {
+      const r = await fetch("/api/quota", { cache: "no-store" });
+      if (!r.ok) return;
+      const j = (await r.json()) as QuotaInfo;
+      setQuota(j);
+    } catch {
+      // ignore — chip just won't show
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchQuota();
+  }, [fetchQuota]);
 
   // Best-effort auto-float when the tab goes hidden. Most browsers preserve
   // the user-activation token for ~5s after the last gesture, so this works
@@ -247,6 +269,7 @@ export function ScreenShare() {
     const a = (para?.textContent ?? "").trim();
     if (!a || a === "Thinking…" || a === "(empty response)") return;
     setTranscript((prev) => [...prev, { q, a }]);
+    fetchQuota();
   }
 
   async function endSession() {
@@ -287,9 +310,25 @@ export function ScreenShare() {
   const askPanel = (
     <section className="space-y-4">
       <header className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
-          02 — Ask Tunjuk
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+            02 — Ask Tunjuk
+          </h2>
+          {quota?.enabled ? (
+            <span
+              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono ${
+                quota.used >= quota.limit
+                  ? "border-red-500/30 bg-red-500/10 text-red-300"
+                  : "border-cyan-400/20 bg-cyan-400/5 text-cyan-300"
+              }`}
+              title={`${quota.used >= quota.limit ? "Demo allowance used up — top up your Chutes wallet to keep going." : "Free Tunjuk-sponsored prompts available before you need to top up your Chutes wallet."}`}
+            >
+              {quota.used >= quota.limit
+                ? "Demo used — top up chutes.ai/billing"
+                : `${quota.limit - quota.used} / ${quota.limit} free prompts`}
+            </span>
+          ) : null}
+        </div>
         <p className="text-sm text-zinc-400">
           Type a question, or speak it. Tunjuk sees the captured frame.
         </p>
