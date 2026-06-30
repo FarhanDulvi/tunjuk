@@ -1,7 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+
+// motion/react was stripped — runtime incompatibility with the Next 16 /
+// React 19 stack made wrapped sections render at opacity:0. The autoplay
+// and step swap still work via plain React state; SVG scene animations are
+// CSS-driven by the .is-active class and unaffected.
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(m.matches);
+    const onChange = () => setReduced(m.matches);
+    m.addEventListener?.("change", onChange);
+    return () => m.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
 
 const dl = (n: number) => ({ ["--dl"]: n } as CSSProperties);
 
@@ -255,18 +271,10 @@ export function HowItWorks() {
           </div>
 
           <div className="relative flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={step.n}
-                initial={reduced ? false : { opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduced ? undefined : { opacity: 0, y: -14 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <h3 className="mb-4 text-2xl font-semibold text-white">{step.label}</h3>
-                <p className="max-w-md text-sm leading-relaxed text-zinc-400">{step.body}</p>
-              </motion.div>
-            </AnimatePresence>
+            <div key={step.n}>
+              <h3 className="mb-4 text-2xl font-semibold text-white">{step.label}</h3>
+              <p className="max-w-md text-sm leading-relaxed text-zinc-400">{step.body}</p>
+            </div>
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">
