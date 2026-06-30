@@ -10,6 +10,8 @@ export interface ChutesModel {
   supports_vision?: boolean;
   capabilities?: string[];
   modalities?: string[];
+  input_modalities?: string[];
+  output_modalities?: string[];
 }
 
 export interface PickedModel {
@@ -42,20 +44,34 @@ const VISION_HINTS = [
 // Known-good vision model ids on Chutes. Used as a last-resort fallback when
 // /v1/models returns no entries our heuristic recognises. Upstream surfaces
 // a clearer error than ours if the user's plan doesn't include the model.
+// Verified against live llm.chutes.ai/v1/models — these are TEE vision models
+// that Chutes advertises with input_modalities including "image".
 const VISION_FALLBACKS = [
-  "Qwen/Qwen2.5-VL-32B-Instruct",
-  "Qwen/Qwen2.5-VL-7B-Instruct",
-  "meta-llama/Llama-3.2-11B-Vision-Instruct",
+  "Qwen/Qwen3.6-27B-TEE",
+  "google/gemma-4-31B-turbo-TEE",
+  "Qwen/Qwen3.5-397B-A17B-TEE",
+  "moonshotai/Kimi-K2.6-TEE",
+  "moonshotai/Kimi-K2.5-TEE",
 ];
+
+function hasImageInput(arr: string[] | undefined): boolean {
+  return !!arr?.some((c) => c.toLowerCase() === "image");
+}
 
 function isProbablyVisionModel(m: ChutesModel): boolean {
   if (m.supports_vision === true) return true;
   if (m.capabilities?.some((c) => c.toLowerCase().includes("vision"))) {
     return true;
   }
-  if (m.modalities?.some((c) => c.toLowerCase() === "image")) return true;
+  if (hasImageInput(m.modalities)) return true;
+  if (hasImageInput(m.input_modalities)) return true;
   const id = (m.id ?? "").toLowerCase();
   return VISION_HINTS.some((h) => id.includes(h));
+}
+
+function looksConfidential(m: ChutesModel): boolean {
+  if (m.confidential_compute === true) return true;
+  return (m.id ?? "").toUpperCase().endsWith("-TEE");
 }
 
 export async function listModels(accessToken: string): Promise<ChutesModel[]> {
@@ -89,13 +105,13 @@ export async function pickVisionModel(
   }
   const visionModels = models.filter(isProbablyVisionModel);
   const teeFirst = visionModels.sort((a, b) => {
-    const aT = a.confidential_compute ? 1 : 0;
-    const bT = b.confidential_compute ? 1 : 0;
+    const aT = looksConfidential(a) ? 1 : 0;
+    const bT = looksConfidential(b) ? 1 : 0;
     return bT - aT;
   });
   const choice = teeFirst[0];
   if (choice) {
-    return { id: choice.id, isConfidential: !!choice.confidential_compute };
+    return { id: choice.id, isConfidential: looksConfidential(choice) };
   }
 
   // Catalog didn't surface a vision model our heuristic recognises. Try the
@@ -104,10 +120,11 @@ export async function pickVisionModel(
   const idSet = new Set(models.map((m) => m.id));
   for (const f of VISION_FALLBACKS) {
     if (idSet.has(f)) {
-      return { id: f, isConfidential: false };
+      return { id: f, isConfidential: f.toUpperCase().endsWith("-TEE") };
     }
   }
-  return { id: VISION_FALLBACKS[0], isConfidential: false };
+  const first = VISION_FALLBACKS[0];
+  return { id: first, isConfidential: first.toUpperCase().endsWith("-TEE") };
 }
 
 export interface AskInput {

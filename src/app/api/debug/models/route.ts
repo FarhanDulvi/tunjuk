@@ -23,15 +23,25 @@ const VISION_HINTS = [
   "glm-4v",
 ];
 
+function hasImageInput(arr: string[] | undefined): boolean {
+  return !!arr?.some((c) => c.toLowerCase() === "image");
+}
+
 function isProbablyVisionModel(m: ChutesModel): boolean {
   if (m.supports_vision === true) return true;
   if (m.capabilities?.some((c) => c.toLowerCase().includes("vision"))) {
     return true;
   }
-  if (m.modalities?.some((c) => c.toLowerCase() === "image")) return true;
+  if (hasImageInput(m.modalities)) return true;
+  if (hasImageInput(m.input_modalities)) return true;
   const id = (m.id ?? "").toLowerCase();
   if (VISION_HINTS.some((h) => id.includes(h))) return true;
   return false;
+}
+
+function looksConfidential(m: ChutesModel): boolean {
+  if (m.confidential_compute === true) return true;
+  return (m.id ?? "").toUpperCase().endsWith("-TEE");
 }
 
 export async function GET() {
@@ -44,28 +54,26 @@ export async function GET() {
     const models = await listModels(session.accessToken);
 
     const visionModels = models.filter(isProbablyVisionModel);
-    const teeVisionModels = visionModels.filter(
-      (m) => m.confidential_compute === true,
-    );
+    const teeVisionModels = visionModels.filter(looksConfidential);
 
     // Mirror pickVisionModel: env override wins, otherwise prefer TEE.
     let picked: { id: string; isConfidential: boolean } | null = null;
     if (env.CHUTES_VISION_MODEL) {
       picked = {
         id: env.CHUTES_VISION_MODEL,
-        isConfidential: env.CHUTES_VISION_MODEL.toLowerCase().includes("tee"),
+        isConfidential: env.CHUTES_VISION_MODEL.toUpperCase().endsWith("-TEE"),
       };
     } else {
       const teeFirst = [...visionModels].sort((a, b) => {
-        const aT = a.confidential_compute ? 1 : 0;
-        const bT = b.confidential_compute ? 1 : 0;
+        const aT = looksConfidential(a) ? 1 : 0;
+        const bT = looksConfidential(b) ? 1 : 0;
         return bT - aT;
       });
       const choice = teeFirst[0];
       if (choice) {
         picked = {
           id: choice.id,
-          isConfidential: !!choice.confidential_compute,
+          isConfidential: looksConfidential(choice),
         };
       }
     }
